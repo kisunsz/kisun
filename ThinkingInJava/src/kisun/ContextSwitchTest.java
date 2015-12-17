@@ -1,4 +1,4 @@
-package kisun.maze;
+package kisun;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
