@@ -1,8 +1,6 @@
 package com.oracle.fusion.hcm.ca.scanner;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.Queue;
@@ -10,7 +8,6 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.io.FileUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -18,9 +15,9 @@ import org.jsoup.select.Elements;
 
 import com.alibaba.fastjson.JSON;
 
-public class Scanner implements Runnable{
-	
-	private static Queue<InfoBean> list=new LinkedBlockingDeque<InfoBean>();
+public class Scanner {
+
+	private static Queue<InfoBean> list = new LinkedBlockingDeque<InfoBean>();
 	private static String url = "http://vdisk.weibo.com/search/?type=&sortby=default&keyword=mobi&filetype=&page=1";
 
 	public static void main(String[] args) {
@@ -29,8 +26,11 @@ public class Scanner implements Runnable{
 	}
 
 	private static void download() {
-		ThreadPoolExecutor executor=new ThreadPoolExecutor(5, 10, 10, TimeUnit.SECONDS, new LinkedBlockingDeque<Runnable>());
-		executor.execute(new Scanner());
+		ThreadPoolExecutor executor = new ThreadPoolExecutor(5, 10, 10, TimeUnit.SECONDS,
+				new LinkedBlockingDeque<Runnable>());
+		for (InfoBean info : list) {
+			executor.execute(new Download(info));
+		}
 	}
 
 	private static void parseHTML() {
@@ -49,14 +49,14 @@ public class Scanner implements Runnable{
 					continue;
 				Element a = as.get(0);
 				String title = a.attr("title");
-				if (title == null || title.isEmpty()
-						|| !title.endsWith(".mobi"))
+				if (title == null || title.isEmpty() || !title.endsWith(".mobi"))
 					continue;
 				Elements downloads = tr.select(".search_table_action a");
-				if(downloads.isEmpty())continue;
+				if (downloads.isEmpty())
+					continue;
 				Element download = downloads.get(0);
 				String info = download.attr("data-info");
-				InfoBean bean=JSON.parseObject(info, InfoBean.class);
+				InfoBean bean = JSON.parseObject(info, InfoBean.class);
 				list.add(bean);
 			}
 		} catch (IOException e) {
@@ -64,23 +64,4 @@ public class Scanner implements Runnable{
 		}
 	}
 
-	@Override
-	public void run() {
-		InfoBean bean = getInfoBean();
-		if(bean==null)return;
-		File file=new File("d:/mobi/"+bean.getFilename());
-		try {
-			FileUtils.copyURLToFile(new URL(bean.getUrl()), file);
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public synchronized InfoBean getInfoBean(){
-		return list.poll();
-	}
-	
-	
 }
